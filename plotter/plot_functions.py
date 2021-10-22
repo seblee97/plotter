@@ -172,7 +172,7 @@ def plot_multi_seed_run(
     plt.xlabel(TIME_UNIT)
     plt.ylabel(tag)
 
-    fig.tight_layout()
+    # fig.tight_layout()
     return fig
 
 
