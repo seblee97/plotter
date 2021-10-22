@@ -237,7 +237,6 @@ def plot_multi_seed_multi_run(
             fig = plot_multi_seed_run(
                 fig=plt.figure(figsize=(SUMMARY_FIGSIZE)),
                 tag=tag,
-                figsize=(SUMMARY_FIGSIZE),
                 relevant_experiments=relevant_experiments,
                 experiment_folders=experiment_folders,
                 window_width=window_width,
@@ -341,7 +340,6 @@ def plot_all_multi_seed_multi_run(
                 _ = plot_multi_seed_run(
                     fig=fig_sub,
                     tag=tag_list[graph_index],
-                    figsize=(SUMMARY_FIGSIZE),
                     relevant_experiments=exp_list[graph_index],
                     experiment_folders=experiment_folders,
                     window_width=window_width,
