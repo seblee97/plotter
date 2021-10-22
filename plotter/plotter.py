@@ -1,8 +1,7 @@
 import math
 import os
-from typing import List, Tuple, Union
+from typing import List
 
-import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -49,30 +48,6 @@ class Plotter:
         self._plot_tags = list(self._log_df.columns)
         self._scaling = len(self._log_df)
 
-    @staticmethod
-    def get_figure_skeleton(
-        height: Union[int, float],
-        width: Union[int, float],
-        num_columns: int,
-        num_rows: int,
-    ) -> Tuple:
-
-        fig = plt.figure(
-            constrained_layout=False, figsize=(num_columns * width, num_rows * height)
-        )
-
-        heights = [height for _ in range(num_rows)]
-        widths = [width for _ in range(num_columns)]
-
-        spec = gridspec.GridSpec(
-            nrows=num_rows,
-            ncols=num_columns,
-            width_ratios=widths,
-            height_ratios=heights,
-        )
-
-        return fig, spec
-
     def plot_learning_curves(self):
         # unsmoothed
         self._plot_learning_curves(smoothing=None)
@@ -92,7 +67,7 @@ class Plotter:
         num_rows = graph_layout[0]
         num_columns = graph_layout[1]
 
-        self.fig, self.spec = self.get_figure_skeleton(
+        self.fig, self.spec = plot_functions.get_figure_skeleton(
             height=4, width=5, num_columns=num_columns, num_rows=num_rows
         )
 
