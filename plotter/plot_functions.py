@@ -1,7 +1,9 @@
+import math
 import os
-from typing import List, Union
+from typing import List, Tuple, Union
 
 import matplotlib as mpl
+import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -11,6 +13,45 @@ TIME_UNIT = "time_unit"
 SUMMARY_FIGSIZE = (9, 6)
 DISCRETE = "discrete"
 CONTINUOUS = "continuous"
+
+GRAPH_LAYOUTS = {
+    1: (1, 1),
+    2: (2, 1),
+    3: (3, 1),
+    4: (2, 2),
+    5: (3, 2),
+    6: (3, 2),
+    7: (3, 3),
+    8: (3, 3),
+    9: (3, 3),
+    10: (4, 3),
+    11: (4, 3),
+    12: (4, 3),
+}
+
+
+def get_figure_skeleton(
+    height: Union[int, float],
+    width: Union[int, float],
+    num_columns: int,
+    num_rows: int,
+) -> Tuple:
+
+    fig = plt.figure(
+        constrained_layout=False, figsize=(num_columns * width, num_rows * height)
+    )
+
+    heights = [height for _ in range(num_rows)]
+    widths = [width for _ in range(num_columns)]
+
+    spec = gridspec.GridSpec(
+        nrows=num_rows,
+        ncols=num_columns,
+        width_ratios=widths,
+        height_ratios=heights,
+    )
+
+    return fig, spec
 
 
 def smooth_data(data: List[float], window_width: int) -> List[float]:
@@ -63,6 +104,7 @@ def _get_cmap(colormap: str):
 
 
 def plot_multi_seed_run(
+    fig,
     tag,
     cmap,
     cmap_type,
@@ -71,7 +113,6 @@ def plot_multi_seed_run(
     window_width,
     linewidth,
 ):
-    fig = plt.figure(figsize=(SUMMARY_FIGSIZE))
     for exp_i, exp in enumerate(relevant_experiments):
 
         if cmap_type == DISCRETE:
@@ -194,6 +235,7 @@ def plot_multi_seed_multi_run(
             print(tag)
 
             fig = plot_multi_seed_run(
+                fig=plt.figure(figsize=(SUMMARY_FIGSIZE)),
                 tag=tag,
                 figsize=(SUMMARY_FIGSIZE),
                 relevant_experiments=relevant_experiments,
@@ -212,3 +254,103 @@ def plot_multi_seed_multi_run(
                 dpi=100,
             )
             plt.close()
+
+
+def plot_all_multi_seed_multi_run(
+    folder_path: str,
+    exp_names: List[str],
+    window_width: int,
+    linewidth: int = 3,
+    colormap: Union[str, None] = None,
+):
+    """Expected structure of folder_path is:
+
+    - folder_path
+        |_ run_1
+        |   |_ seed_0
+        |   |_ seed_1
+        |   |_ ...
+        |   |_ seed_M
+        |
+        |_ run_2
+        |   |_ seed_0
+        |   |_ seed_1
+        |   |_ ...
+        |   |_ seed_M
+        |
+        |_ ...
+        |_ ...
+        |_ run_N
+            |_ seed_0
+            |_ seed_1
+            |_ ...
+            |_ seed_M
+
+    with a file called data_logger.csv in each leaf folder.
+    """
+    experiment_folders = {
+        exp_name: os.path.join(folder_path, exp_name) for exp_name in exp_names
+    }
+
+    tag_set = {}
+
+    # arbitrarily select one seed's dataframe for each run to find set of column names
+    for exp, exp_path in experiment_folders.items():
+        ex_seed = [
+            f for f in os.listdir(exp_path) if os.path.isdir(os.path.join(exp_path, f))
+        ][0]
+
+        ex_df = pd.read_csv(os.path.join(exp_path, ex_seed, "data_logger.csv"))
+        tag_subset = list(ex_df.columns)
+        for tag in tag_subset:
+            if tag not in tag_set:
+                tag_set[tag] = []
+            tag_set[tag].append(exp)
+
+    cmap, cmap_type = _get_cmap(colormap)
+
+    num_graphs = len(tag_set)
+
+    default_layout = (
+        math.ceil(np.sqrt(num_graphs)),
+        math.ceil(np.sqrt(num_graphs)),
+    )
+    graph_layout = GRAPH_LAYOUTS.get(num_graphs, default_layout)
+
+    num_rows = graph_layout[0]
+    num_columns = graph_layout[1]
+
+    fig, spec = get_figure_skeleton(
+        height=4, width=5, num_columns=num_columns, num_rows=num_rows
+    )
+
+    tag_list = list(tag_set.keys())
+    exp_list = list(tag_set.values())
+
+    for row in range(num_rows):
+        for col in range(num_columns):
+
+            graph_index = (row) * num_columns + col
+
+            if graph_index < num_graphs:
+
+                print("Plotting graph {}/{}".format(graph_index + 1, num_graphs))
+
+                fig_sub = fig.add_subplot(spec[row, col])
+
+                _ = plot_multi_seed_run(
+                    fig=fig_sub,
+                    tag=tag_list[graph_index],
+                    figsize=(SUMMARY_FIGSIZE),
+                    relevant_experiments=exp_list[graph_index],
+                    experiment_folders=experiment_folders,
+                    window_width=window_width,
+                    linewidth=linewidth,
+                    cmap=cmap,
+                    cmap_type=cmap_type,
+                )
+
+    save_path = os.path.join(folder_path, "all_plot.pdf")
+    plt.tight_layout()
+    fig.savefig(save_path, dpi=100)
+    plt.close()
