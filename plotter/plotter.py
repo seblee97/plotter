@@ -6,7 +6,7 @@ import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from plotter import plotting_functions
+from plotter import plot_functions
 
 
 class Plotter:
@@ -145,7 +145,7 @@ class Plotter:
 
         if smoothing is not None:
             smoothed_data = [
-                plotting_functions.smooth_data(
+                plot_functions.smooth_data(
                     data=data.to_numpy(), window_width=min(len(data), smoothing)
                 )
                 for data in sub_fig_data
