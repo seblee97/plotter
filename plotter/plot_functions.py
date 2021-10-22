@@ -62,6 +62,79 @@ def _get_cmap(colormap: str):
         return cmap, cmap_type
 
 
+def plot_multi_seed_run(
+    tag,
+    cmap,
+    cmap_type,
+    relevant_experiments,
+    experiment_folders,
+    window_width,
+    linewidth,
+):
+    fig = plt.figure(figsize=(SUMMARY_FIGSIZE))
+    for exp_i, exp in enumerate(relevant_experiments):
+
+        if cmap_type == DISCRETE:
+            color = cmap(exp_i / len(relevant_experiments))
+            print(exp_i / len(relevant_experiments))
+            print(color)
+
+        print(cmap_type)
+
+        attribute_data = []
+        seed_folders = [
+            f
+            for f in os.listdir(experiment_folders[exp])
+            if os.path.isdir(os.path.join(experiment_folders[exp], f))
+        ]
+
+        for seed in seed_folders:
+            df = pd.read_csv(
+                os.path.join(experiment_folders[exp], seed, "data_logger.csv")
+            )
+            tag_data = df[tag].dropna()
+            attribute_data.append(tag_data)
+
+        if len(attribute_data):
+            mean_attribute_data = np.mean(attribute_data, axis=0)
+            std_attribute_data = np.std(attribute_data, axis=0)
+            smooth_mean_data = smooth_data(
+                mean_attribute_data, window_width=window_width
+            )
+            smooth_std_data = smooth_data(std_attribute_data, window_width=window_width)
+            if len(smooth_mean_data):
+                scaled_x = (len(df) / len(smooth_mean_data)) * np.arange(
+                    len(smooth_mean_data)
+                )
+                kwargs = {"linewidth": linewidth, "label": exp}
+                if cmap_type == DISCRETE:
+                    kwargs["color"] = color
+                plt.plot(scaled_x, smooth_mean_data, **kwargs)
+                kwargs = {"alpha": 0.3}
+                if cmap_type == DISCRETE:
+                    kwargs["color"] = color
+                plt.fill_between(
+                    scaled_x,
+                    smooth_mean_data - smooth_std_data,
+                    smooth_mean_data + smooth_std_data,
+                    **kwargs,
+                )
+    plt.legend(
+        bbox_to_anchor=(
+            1.01,
+            1.0,
+        ),
+        loc="upper left",
+        ncol=1,
+        borderaxespad=0.0,
+    )
+    plt.xlabel(TIME_UNIT)
+    plt.ylabel(tag)
+
+    fig.tight_layout()
+    return fig
+
+
 def plot_multi_seed_multi_run(
     folder_path: str,
     exp_names: List[str],
@@ -117,71 +190,19 @@ def plot_multi_seed_multi_run(
 
     for tag, relevant_experiments in tag_set.items():
         if tag not in []:
+
             print(tag)
 
-            fig = plt.figure(figsize=(SUMMARY_FIGSIZE))
-            for exp_i, exp in enumerate(relevant_experiments):
-
-                if cmap_type == DISCRETE:
-                    color = cmap(exp_i / len(relevant_experiments))
-                    print(exp_i / len(relevant_experiments))
-                    print(color)
-
-                print(cmap_type)
-
-                attribute_data = []
-                seed_folders = [
-                    f
-                    for f in os.listdir(experiment_folders[exp])
-                    if os.path.isdir(os.path.join(experiment_folders[exp], f))
-                ]
-
-                for seed in seed_folders:
-                    df = pd.read_csv(
-                        os.path.join(experiment_folders[exp], seed, "data_logger.csv")
-                    )
-                    tag_data = df[tag].dropna()
-                    attribute_data.append(tag_data)
-
-                if len(attribute_data):
-                    mean_attribute_data = np.mean(attribute_data, axis=0)
-                    std_attribute_data = np.std(attribute_data, axis=0)
-                    smooth_mean_data = smooth_data(
-                        mean_attribute_data, window_width=window_width
-                    )
-                    smooth_std_data = smooth_data(
-                        std_attribute_data, window_width=window_width
-                    )
-                    if len(smooth_mean_data):
-                        scaled_x = (len(df) / len(smooth_mean_data)) * np.arange(
-                            len(smooth_mean_data)
-                        )
-                        kwargs = {"linewidth": linewidth, "label": exp}
-                        if cmap_type == DISCRETE:
-                            kwargs["color"] = color
-                        plt.plot(scaled_x, smooth_mean_data, **kwargs)
-                        kwargs = {"alpha": 0.3}
-                        if cmap_type == DISCRETE:
-                            kwargs["color"] = color
-                        plt.fill_between(
-                            scaled_x,
-                            smooth_mean_data - smooth_std_data,
-                            smooth_mean_data + smooth_std_data,
-                            **kwargs,
-                        )
-            plt.legend(
-                bbox_to_anchor=(
-                    1.01,
-                    1.0,
-                ),
-                loc="upper left",
-                ncol=1,
-                borderaxespad=0.0,
+            fig = plot_multi_seed_run(
+                tag=tag,
+                figsize=(SUMMARY_FIGSIZE),
+                relevant_experiments=relevant_experiments,
+                experiment_folders=experiment_folders,
+                window_width=window_width,
+                linewidth=linewidth,
+                cmap=cmap,
+                cmap_type=cmap_type,
             )
-            plt.xlabel(TIME_UNIT)
-            plt.ylabel(tag)
-
-            fig.tight_layout()
 
             os.makedirs(os.path.join(folder_path, "figures"), exist_ok=True)
             fig.savefig(
