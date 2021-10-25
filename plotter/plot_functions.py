@@ -112,6 +112,7 @@ def plot_multi_seed_run(
     experiment_folders,
     window_width,
     linewidth,
+    legend=True,
 ):
     for exp_i, exp in enumerate(relevant_experiments):
 
@@ -160,15 +161,16 @@ def plot_multi_seed_run(
                     smooth_mean_data + smooth_std_data,
                     **kwargs,
                 )
-    plt.legend(
-        bbox_to_anchor=(
-            1.01,
-            1.0,
-        ),
-        loc="upper left",
-        ncol=1,
-        borderaxespad=0.0,
-    )
+    if legend:
+        plt.legend(
+            bbox_to_anchor=(
+                1.01,
+                1.0,
+            ),
+            loc="upper left",
+            ncol=1,
+            borderaxespad=0.0,
+        )
     plt.xlabel(TIME_UNIT)
     plt.ylabel(tag)
 
@@ -346,6 +348,7 @@ def plot_all_multi_seed_multi_run(
                     linewidth=linewidth,
                     cmap=cmap,
                     cmap_type=cmap_type,
+                    legend=graph_index == num_graphs - 1,
                 )
 
     save_path = os.path.join(folder_path, "all_plot.pdf")
