@@ -1,6 +1,6 @@
 import math
 import os
-from typing import List
+from typing import List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -38,6 +38,7 @@ class Plotter:
         self._xlabel = xlabel
 
         self._plot_tags: List[str]
+        self._tag_grouping: List[Union[str, List[str]]]
 
         self._log_df: pd.DataFrame
         self._scaling: int
@@ -47,6 +48,9 @@ class Plotter:
         self._log_df = pd.read_csv(self._logfile_path)
         self._plot_tags = list(self._log_df.columns)
         self._scaling = len(self._log_df)
+
+    def add_tag_groups(self, tag_groups):
+        self._plot_tags.extend(tag_groups)
 
     def plot_learning_curves(self):
         # unsmoothed
@@ -94,12 +98,17 @@ class Plotter:
         self.fig.savefig(save_path, dpi=100)
         plt.close()
 
-    def _plot_scalar(self, row: int, col: int, data_tag: str, smoothing: int):
+    def _plot_scalar(
+        self,
+        row: int,
+        col: int,
+        data_tag: Union[str, Tuple[str, List[str]]],
+        smoothing: int,
+    ):
         fig_sub = self.fig.add_subplot(self.spec[row, col])
 
         # labelling
         fig_sub.set_xlabel(self._xlabel)
-        fig_sub.set_ylabel(data_tag)
 
         # grids
         fig_sub.minorticks_on()
@@ -111,11 +120,14 @@ class Plotter:
         )
 
         # plot data
-        if data_tag in self._log_df.columns:
+        if isinstance(data_tag, str) and data_tag in self._log_df.columns:
             sub_fig_tags = [data_tag]
             sub_fig_data = [self._log_df[data_tag].dropna()]
-        else:
-            sub_fig_tags = [tag for tag in self._log_df.columns if data_tag in tag]
+            fig_sub.set_ylabel(data_tag)
+        elif isinstance(data_tag, tuple):
+            group_label = data_tag[0]
+            fig_sub.set_ylabel(group_label)
+            sub_fig_tags = data_tag[1]
             sub_fig_data = [self._log_df[tag].dropna() for tag in sub_fig_tags]
 
         if smoothing is not None:
@@ -135,7 +147,8 @@ class Plotter:
         for x, y, label in zip(x_data, smoothed_data, sub_fig_tags):
             fig_sub.plot(x, y, label=label)
 
-        # fig_sub.legend()
+        if isinstance(data_tag, tuple):
+            fig_sub.legend()
         row_index = row + 1
         title = f"{str(col + 1)}{chr(ord('`')+row_index)}"
         fig_sub.set_title(title)
