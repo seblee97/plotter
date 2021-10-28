@@ -118,10 +118,6 @@ def plot_multi_seed_run(
 
         if cmap_type == DISCRETE:
             color = cmap(exp_i / len(relevant_experiments))
-            print(exp_i / len(relevant_experiments))
-            print(color)
-
-        print(cmap_type)
 
         attribute_data = []
         seed_folders = [
