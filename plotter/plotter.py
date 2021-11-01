@@ -5,29 +5,11 @@ from typing import List, Tuple, Union
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from plotter import plot_functions
+from plotter import constants, plot_functions
 
 
 class Plotter:
     """Class for plotting scalar data."""
-
-    GRAPH_LAYOUTS = {
-        1: (1, 1),
-        2: (2, 1),
-        3: (3, 1),
-        4: (2, 2),
-        5: (3, 2),
-        6: (3, 2),
-        7: (3, 3),
-        8: (3, 3),
-        9: (3, 3),
-        10: (4, 3),
-        11: (4, 3),
-        12: (4, 3),
-    }
-
-    PLOT_PDF = "plot.pdf"
-    RAW_PLOT_PDF = "raw_plot.pdf"
 
     def __init__(
         self, save_folder: str, logfile_path: str, smoothing: int, xlabel: str
@@ -49,24 +31,41 @@ class Plotter:
         self._plot_tags = list(self._log_df.columns)
         self._scaling = len(self._log_df)
 
-    def add_tag_groups(self, tag_groups):
+    def add_tag_groups(self, tag_groups: List[Tuple[str, List[str]]]) -> None:
+        """Method for assining tag groups.
+
+        This is to allow for plotting subsets of tags in one plot,
+        i.e. for more direct comparison.
+
+        Args:
+            tag_groups: list of tuples of tag groups.
+            The first element of the tuple is the group name.
+            The second element of the tuple is the list of tags under the group.
+        """
         self._plot_tags.extend(tag_groups)
 
-    def plot_learning_curves(self):
+    def plot_learning_curves(self) -> None:
+        """Main call function,
+        calls smoothed and non-smoothed version.
+        """
         # unsmoothed
         self._plot_learning_curves(smoothing=None)
         # smoothed
         self._plot_learning_curves(smoothing=self._smoothing)
 
-    def _plot_learning_curves(self, smoothing: int) -> None:
+    def _plot_learning_curves(self, smoothing: Union[None, int]) -> None:
+        """Plot each tag data.
 
+        Args:
+            smoothing: moving average window.
+        """
         num_graphs = len(self._plot_tags)
 
         default_layout = (
             math.ceil(np.sqrt(num_graphs)),
             math.ceil(np.sqrt(num_graphs)),
         )
-        graph_layout = self.GRAPH_LAYOUTS.get(num_graphs, default_layout)
+        graph_layout = constants.GRAPH_LAYOUTS.get(num_graphs, default_layout)
 
         num_rows = graph_layout[0]
         num_columns = graph_layout[1]
@@ -91,9 +90,9 @@ class Plotter:
                     )
 
         if smoothing is not None:
-            save_path = os.path.join(self._save_folder, self.PLOT_PDF)
+            save_path = os.path.join(self._save_folder, constants.PLOT_PDF)
         else:
-            save_path = os.path.join(self._save_folder, self.RAW_PLOT_PDF)
+            save_path = os.path.join(self._save_folder, constants.RAW_PLOT_PDF)
         plt.tight_layout()
         self.fig.savefig(save_path, dpi=100)
         plt.close()
@@ -105,6 +104,14 @@ class Plotter:
         data_tag: Union[str, Tuple[str, List[str]]],
         smoothing: int,
     ):
+        """Plot for specific tag.
+
+        Args:
+            row: subplot row id.
+            col: subplot column id.
+            data_tag: name of tag or tag group tuple.
+            smoothing: moving average window.
+        """
         fig_sub = self.fig.add_subplot(self.spec[row, col])
 
         # labelling
