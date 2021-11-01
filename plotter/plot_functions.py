@@ -8,26 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib import cm
-
-TIME_UNIT = "time_unit"
-SUMMARY_FIGSIZE = (9, 6)
-DISCRETE = "discrete"
-CONTINUOUS = "continuous"
-
-GRAPH_LAYOUTS = {
-    1: (1, 1),
-    2: (2, 1),
-    3: (3, 1),
-    4: (2, 2),
-    5: (3, 2),
-    6: (3, 2),
-    7: (3, 3),
-    8: (3, 3),
-    9: (3, 3),
-    10: (4, 3),
-    11: (4, 3),
-    12: (4, 3),
-}
+from plotter import constants
 
 
 def get_figure_skeleton(
@@ -36,7 +17,18 @@ def get_figure_skeleton(
     num_columns: int,
     num_rows: int,
 ) -> Tuple:
+    """Get overall figure structure and specfication.
 
+    Args:
+        height: height of each subfigure in plot.
+        width: width of each subfigure in plot.
+        num_columns: total number of columns in plot.
+        num_rows: total number of rows in plot.
+
+    Returns:
+        fig: matplotlib figure object
+        spec: matplotlib gridspec for fig organisation.
+    """
     fig = plt.figure(
         constrained_layout=False, figsize=(num_columns * width, num_rows * height)
     )
@@ -90,33 +82,60 @@ def smooth_data(data: List[float], window_width: int) -> List[float]:
     return smoothed_data
 
 
-def _get_cmap(colormap: str):
+def _get_cmap(colormap: str) -> Tuple:
+    """Obtain matplotlig colormap.
+
+    Either returns a continuous colormap or discrete cycle.
+
+    Args:
+        colormap: name of map.
+
+    Returns:
+        cmap: colormap obect or color cycle.
+        cmap_type: continuous or discrete.
+    """
     cmap = cm.get_cmap(colormap)
 
     if isinstance(cmap, mpl.colors.ListedColormap):
-        cmap_type = DISCRETE
+        cmap_type = constants.DISCRETE
         color_cycle = mpl.cycler(color=cmap.colors)
         mpl.rcParams["axes.prop_cycle"] = color_cycle
         return cmap, cmap_type
     else:
-        cmap_type = CONTINUOUS
+        cmap_type = constants.CONTINUOUS
         return cmap, cmap_type
 
 
 def plot_multi_seed_run(
     fig,
-    tag,
+    tag: str,
     cmap,
-    cmap_type,
-    relevant_experiments,
-    experiment_folders,
-    window_width,
-    linewidth,
+    cmap_type: str,
+    relevant_experiments: List[str],
+    experiment_folders: List[str],
+    window_width: int,
+    linewidth: int,
     legend=True,
 ):
+    """Plots for multiple runs each with multiple seeds.
+
+    Args:
+        fig: matplotlib figure object.
+        tag: name of tag in data to plot.
+        cmap: colormap.
+        cmap_type: colormap type (discrete or continuous).
+        relevant_experiments: subset of experiments to include.
+        experiment_folders: all experiment folders from which to plot data.
+        window_width: smoothing parameter.
+        linewidth: width of line on plot.
+        legend: whether or not to inlcude legend.
+
+    Returns:
+        fig: figure with plots.
+    """
     for exp_i, exp in enumerate(relevant_experiments):
 
-        if cmap_type == DISCRETE:
+        if cmap_type == constants.DISCRETE:
             color = cmap(exp_i / len(relevant_experiments))
 
         attribute_data = []
@@ -145,11 +164,11 @@ def plot_multi_seed_run(
                     len(smooth_mean_data)
                 )
                 kwargs = {"linewidth": linewidth, "label": exp}
-                if cmap_type == DISCRETE:
+                if cmap_type == constants.DISCRETE:
                     kwargs["color"] = color
                 plt.plot(scaled_x, smooth_mean_data, **kwargs)
                 kwargs = {"alpha": 0.3}
-                if cmap_type == DISCRETE:
+                if cmap_type == constants.DISCRETE:
                     kwargs["color"] = color
                 plt.fill_between(
                     scaled_x,
@@ -167,7 +186,7 @@ def plot_multi_seed_run(
             ncol=1,
             borderaxespad=0.0,
         )
-    plt.xlabel(TIME_UNIT)
+    plt.xlabel(constants.TIME_UNIT)
     plt.ylabel(tag)
 
     # fig.tight_layout()
@@ -180,8 +199,10 @@ def plot_multi_seed_multi_run(
     window_width: int,
     linewidth: int = 3,
     colormap: Union[str, None] = None,
-):
-    """Expected structure of folder_path is:
+) -> None:
+    """Plot all data in separate figures for each tag.
+
+    Expected structure of folder_path is:
 
     - folder_path
         |_ run_1
@@ -205,6 +226,13 @@ def plot_multi_seed_multi_run(
             |_ seed_M
 
     with a file called data_logger.csv in each leaf folder.
+
+    Args:
+        folder_path: path to data folder.
+        exp_names: list of experiment names within folder path.
+        window_width: moving average smoothing parameter.
+        linewidth: width of line on plot.
+        colormap: name of colormap to use.
     """
     experiment_folders = {
         exp_name: os.path.join(folder_path, exp_name) for exp_name in exp_names
@@ -233,7 +261,7 @@ def plot_multi_seed_multi_run(
             print(tag)
 
             fig = plot_multi_seed_run(
-                fig=plt.figure(figsize=(SUMMARY_FIGSIZE)),
+                fig=plt.figure(figsize=(constants.SUMMARY_FIGSIZE)),
                 tag=tag,
                 relevant_experiments=relevant_experiments,
                 experiment_folders=experiment_folders,
@@ -260,7 +288,9 @@ def plot_all_multi_seed_multi_run(
     linewidth: int = 3,
     colormap: Union[str, None] = None,
 ):
-    """Expected structure of folder_path is:
+    """Plot all data in one single figure (all exps, all repeats.)
+
+    Expected structure of folder_path is:
 
     - folder_path
         |_ run_1
@@ -284,6 +314,13 @@ def plot_all_multi_seed_multi_run(
             |_ seed_M
 
     with a file called data_logger.csv in each leaf folder.
+
+    Args:
+        folder_path: path to data folder.
+        exp_names: list of experiment names within folder path.
+        window_width: moving average smoothing parameter.
+        linewidth: width of line on plot.
+        colormap: name of colormap to use.
     """
     experiment_folders = {
         exp_name: os.path.join(folder_path, exp_name) for exp_name in exp_names
@@ -312,7 +349,7 @@ def plot_all_multi_seed_multi_run(
         math.ceil(np.sqrt(num_graphs)),
         math.ceil(np.sqrt(num_graphs)),
     )
-    graph_layout = GRAPH_LAYOUTS.get(num_graphs, default_layout)
+    graph_layout = constants.GRAPH_LAYOUTS.get(num_graphs, default_layout)
 
     num_rows = graph_layout[0]
     num_columns = graph_layout[1]
