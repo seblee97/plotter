@@ -12,12 +12,21 @@ class Plotter:
     """Class for plotting scalar data."""
 
     def __init__(
-        self, save_folder: str, logfile_path: str, smoothing: int, xlabel: str
+        self,
+        save_folder: str,
+        logfile_path: str,
+        smoothing: int,
+        xlabel: str,
+        unique_id: str = "",
     ):
         self._save_folder = save_folder
         self._logfile_path = logfile_path
         self._smoothing = smoothing
         self._xlabel = xlabel
+        if unique_id == "":
+            self._unique_id = unique_id
+        else:
+            self._unique_id = f"{unique_id}_"
 
         self._plot_tags: List[str]
         self._tag_grouping: List[Union[str, List[str]]]
@@ -81,7 +90,10 @@ class Plotter:
 
                 if graph_index < num_graphs:
 
-                    print("Plotting graph {}/{}".format(graph_index + 1, num_graphs))
+                    print(
+                        f"Plotting graph {graph_index + 1}/{num_graphs}: "
+                        f"{self._plot_tags[graph_index]}"
+                    )
                     self._plot_scalar(
                         row=row,
                         col=col,
@@ -90,9 +102,13 @@ class Plotter:
                     )
 
         if smoothing is not None:
-            save_path = os.path.join(self._save_folder, constants.PLOT_PDF)
+            save_path = os.path.join(
+                self._save_folder, f"{self._unique_id}{constants.PLOT_PDF}"
+            )
         else:
-            save_path = os.path.join(self._save_folder, constants.RAW_PLOT_PDF)
+            save_path = os.path.join(
+                self._save_folder, f"{self._unique_id}{constants.RAW_PLOT_PDF}"
+            )
         plt.tight_layout()
         self.fig.savefig(save_path, dpi=100)
         plt.close()
