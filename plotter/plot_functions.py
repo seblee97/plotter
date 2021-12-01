@@ -78,6 +78,10 @@ def smooth_data(data: List[float], window_width: int) -> List[float]:
         for d in data
     ):
         smoothed_data = _smooth(data)
+    else:
+        raise ValueError(
+            "data is incorrect type, should be either list of lists or list."
+        )
 
     return smoothed_data
 
