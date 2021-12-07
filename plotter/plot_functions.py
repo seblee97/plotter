@@ -1,5 +1,6 @@
 import math
 import os
+import re
 from typing import List, Tuple, Union
 
 import matplotlib as mpl
@@ -110,6 +111,32 @@ def _get_cmap(colormap: str) -> Tuple:
         return cmap, cmap_type
 
 
+def _get_csv_path(folder_path: str):
+    data_logger_file_path = [
+        os.path.join(folder_path, f)
+        for f in os.listdir(folder_path)
+        if re.search("^data_logger.*.csv$", f)
+    ]
+
+    if len(data_logger_file_path) == 0:
+        raise AssertionError(
+            (
+                "No data logger csv in right format at "
+                f"{os.path.join(exp_path, ex_seed)}"
+            )
+        )
+    if len(data_logger_file_path) > 1:
+        raise AssertionError(
+            (
+                "Number of data logger csv files in "
+                f"{os.path.join(exp_path, ex_seed)} exceeds one. Ambiguous."
+            )
+        )
+    else:
+        data_logger_file_path = data_logger_file_path[0]
+        return data_logger_file_path
+
+
 def plot_multi_seed_run(
     fig,
     tag: str,
@@ -150,9 +177,12 @@ def plot_multi_seed_run(
         ]
 
         for seed in seed_folders:
-            df = pd.read_csv(
-                os.path.join(experiment_folders[exp], seed, "data_logger.csv")
+
+            data_logger_file_path = _get_csv_path(
+                os.path.join(experiment_folders[exp], seed)
             )
+
+            df = pd.read_csv(data_logger_file_path)
             tag_data = df[tag].dropna()
             attribute_data.append(tag_data)
 
@@ -250,7 +280,9 @@ def plot_multi_seed_multi_run(
             f for f in os.listdir(exp_path) if os.path.isdir(os.path.join(exp_path, f))
         ][0]
 
-        ex_df = pd.read_csv(os.path.join(exp_path, ex_seed, "data_logger.csv"))
+        data_logger_file_path = _get_csv_path(os.path.join(exp_path, ex_seed))
+
+        ex_df = pd.read_csv(data_logger_file_path)
         tag_subset = list(ex_df.columns)
         for tag in tag_subset:
             if tag not in tag_set:
@@ -338,7 +370,9 @@ def plot_all_multi_seed_multi_run(
             f for f in os.listdir(exp_path) if os.path.isdir(os.path.join(exp_path, f))
         ][0]
 
-        ex_df = pd.read_csv(os.path.join(exp_path, ex_seed, "data_logger.csv"))
+        data_logger_file_path = _get_csv_path(os.path.join(exp_path, ex_seed))
+
+        ex_df = pd.read_csv(data_logger_file_path)
         tag_subset = list(ex_df.columns)
         for tag in tag_subset:
             if tag not in tag_set:
