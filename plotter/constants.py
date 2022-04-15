@@ -6,6 +6,8 @@ CONTINUOUS = "continuous"
 PLOT_PDF = "plot.pdf"
 RAW_PLOT_PDF = "raw_plot.pdf"
 
+INTERPOLATION = "interpolation"
+
 GRAPH_LAYOUTS = {
     1: (1, 1),
     2: (2, 1),
