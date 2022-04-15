@@ -1,7 +1,7 @@
 import math
 import os
 import re
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import matplotlib as mpl
 import matplotlib.gridspec as gridspec
@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 from matplotlib import cm
 from plotter import constants
+from scipy import interpolate
 
 
 def get_figure_skeleton(
@@ -137,6 +138,38 @@ def _get_csv_path(folder_path: str):
         return data_logger_file_path
 
 
+def _standard_average_data(attribute_data: List[pd.Series]):
+    mean_attribute_data = np.mean(attribute_data, axis=0)
+    std_attribute_data = np.std(attribute_data, axis=0)
+
+    x_ = np.arange(len(mean_attribute_data))
+
+    return x_, mean_attribute_data, std_attribute_data
+
+
+def _interpolate_data(attribute_data: List[pd.Series]):
+    interpolation_functions = [
+        interpolate.interp1d(np.array(instance.index), np.array(instance))
+        for instance in attribute_data
+    ]
+
+    x_min = attribute_data[0].index[0]
+    x_max = attribute_data[0].index[-1]
+
+    x_ = np.linspace(
+        x_min,
+        x_max,
+        len(attribute_data[0]),
+    )
+
+    interpolated_data = [func(x_) for func in interpolation_functions]
+
+    mean_attribute_data = np.mean(interpolated_data, axis=0)
+    std_attribute_data = np.std(interpolated_data, axis=0)
+
+    return x_, mean_attribute_data, std_attribute_data
+
+
 def plot_multi_seed_run(
     fig,
     tag: str,
@@ -146,7 +179,9 @@ def plot_multi_seed_run(
     experiment_folders: List[str],
     window_width: int,
     linewidth: int,
+    averaging_method: str,
     legend=True,
+    index: Optional[str] = None,
 ):
     """Plots for multiple runs each with multiple seeds.
 
@@ -159,6 +194,7 @@ def plot_multi_seed_run(
         experiment_folders: all experiment folders from which to plot data.
         window_width: smoothing parameter.
         linewidth: width of line on plot.
+        averaging_method: whether to use interpolation or standard averaging.
         legend: whether or not to inlcude legend.
 
     Returns:
@@ -183,20 +219,29 @@ def plot_multi_seed_run(
             )
 
             df = pd.read_csv(data_logger_file_path)
+            if index is not None:
+                df = df.set_index(index)
             tag_data = df[tag].dropna()
             attribute_data.append(tag_data)
 
         if len(attribute_data):
-            mean_attribute_data = np.mean(attribute_data, axis=0)
-            std_attribute_data = np.std(attribute_data, axis=0)
+
+            if averaging_method == constants.INTERPOLATION:
+                x_, mean_attribute_data, std_attribute_data = _interpolate_data(
+                    attribute_data
+                )
+            elif averaging_method == constants.STANDARD:
+                x_, mean_attribute_data, std_attribute_data = _standard_average_data(
+                    attribute_data
+                )
+
             smooth_mean_data = smooth_data(
                 mean_attribute_data, window_width=window_width
             )
             smooth_std_data = smooth_data(std_attribute_data, window_width=window_width)
+
             if len(smooth_mean_data):
-                scaled_x = (len(df) / len(smooth_mean_data)) * np.arange(
-                    len(smooth_mean_data)
-                )
+                scaled_x = np.linspace(x_[0], x_[-1], len(smooth_mean_data))
                 kwargs = {"linewidth": linewidth, "label": exp}
                 if cmap_type == constants.DISCRETE:
                     kwargs["color"] = color
@@ -231,8 +276,10 @@ def plot_multi_seed_multi_run(
     folder_path: str,
     exp_names: List[str],
     window_width: int,
+    averaging_method: str,
     linewidth: int = 3,
     colormap: Union[str, None] = None,
+    index: Optional[str] = None,
 ) -> None:
     """Plot all data in separate figures for each tag.
 
@@ -292,7 +339,7 @@ def plot_multi_seed_multi_run(
     cmap, cmap_type = _get_cmap(colormap)
 
     for tag, relevant_experiments in tag_set.items():
-        if tag not in []:
+        if tag != index:
 
             print(tag)
 
@@ -305,6 +352,8 @@ def plot_multi_seed_multi_run(
                 linewidth=linewidth,
                 cmap=cmap,
                 cmap_type=cmap_type,
+                averaging_method=averaging_method,
+                index=index,
             )
 
             os.makedirs(os.path.join(folder_path, "figures"), exist_ok=True)
@@ -321,8 +370,10 @@ def plot_all_multi_seed_multi_run(
     folder_path: str,
     exp_names: List[str],
     window_width: int,
+    averaging_method: str,
     linewidth: int = 3,
     colormap: Union[str, None] = None,
+    index: Optional[str] = None,
 ):
     """Plot all data in one single figure (all exps, all repeats.)
 
@@ -382,6 +433,8 @@ def plot_all_multi_seed_multi_run(
     cmap, cmap_type = _get_cmap(colormap)
 
     num_graphs = len(tag_set)
+    if index is not None:
+        num_graphs -= 1
 
     default_layout = (
         math.ceil(np.sqrt(num_graphs)),
@@ -396,7 +449,7 @@ def plot_all_multi_seed_multi_run(
         height=4, width=5, num_columns=num_columns, num_rows=num_rows
     )
 
-    tag_list = list(tag_set.keys())
+    tag_list = [t for t in tag_set.keys() if t != index]
     exp_list = list(tag_set.values())
 
     for row in range(num_rows):
@@ -420,6 +473,8 @@ def plot_all_multi_seed_multi_run(
                     cmap=cmap,
                     cmap_type=cmap_type,
                     legend=graph_index == num_graphs - 1,
+                    averaging_method=averaging_method,
+                    index=index,
                 )
 
     save_path = os.path.join(folder_path, "all_plot.pdf")
