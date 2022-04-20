@@ -148,10 +148,17 @@ def _standard_average_data(attribute_data: List[pd.Series]):
 
 
 def _interpolate_data(attribute_data: List[pd.Series]):
-    interpolation_functions = [
-        interpolate.interp1d(np.array(instance.index), np.array(instance))
-        for instance in attribute_data
-    ]
+
+    interpolation_functions = []
+
+    for instance in attribute_data:
+        x_data = np.array(instance.index)
+        y_data = np.array(instance)
+        # dummy data at x = 0
+        # to ensure interpolation covers full range of data.
+        x_data = np.insert(x_data, 0, 0)
+        y_data = np.insert(y_data, 0, y_data[0])
+        interpolation_functions.append(interpolate.interp1d(x_data, y_data))
 
     x_min = attribute_data[0].index[0]
     x_max = attribute_data[0].index[-1]
